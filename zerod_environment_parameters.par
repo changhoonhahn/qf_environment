@@ -1,0 +1,16 @@
+typedef struct {
+	int   run; 
+	float zmin;
+	float zmax;
+	int cylrad;
+	int cylheight;
+	int   nbin;	
+    int  thresh;
+} PARAMETERS;
+
+PARAMETERS 1   0.2   1.0   1   50  6  80
+PARAMETERS 2   0.2   1.0   2   50  6  75 
+PARAMETERS 6   0.2   0.8   8   30  6  60
+PARAMETERS 7   0.06   0.145   1   50  2  80 
+PARAMETERS 8   0.01   0.2   2   50  2  75 
+PARAMETERS 9   0.01   0.2   8   50  2  60 
