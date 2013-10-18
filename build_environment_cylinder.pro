@@ -1,5 +1,6 @@
 pro build_environment_cylinder,run,Nransack,primus=primus, sdss=sdss, literature=literature
-    if keyword_set(primus) then sample = ['es1','cosmos','cfhtls_xmm','cdfs','xmm_swire']
+    if keyword_set(primus) then sample = ['']
+    if keyword_set(primus) then fields = ['es1','cosmos','cfhtls_xmm','cdfs','xmm_swire']
     if keyword_set(sdss) then sample = ['sdss']
     subsample = ['all', 'active', 'quiescent']
 
@@ -31,7 +32,7 @@ pro build_environment_cylinder,run,Nransack,primus=primus, sdss=sdss, literature
     print, 'zmin=',zmin,' zmax=',zmax,' cylrad=',cylrad,' cylheight=',cylheight,' nbin=',nbin,' threshold=',thrshld
 
     survey=''
-    for i=0L,n_elements(sample)-1L do survey = survey+sample[i]+'_'
+    for i=0L,n_elements(fields)-1L do survey = survey+fields[i]+'_'
     ransackfile     = 'ransack_'+survey+strtrim(string(Nransack),2)+'.fits'
     print, ransackfile
     ransack_data    = mrdfits(get_path(/ransack)+ransackfile,1) 

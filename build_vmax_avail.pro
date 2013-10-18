@@ -11,7 +11,7 @@ pro build_vmax_avail,run,n_rsk,n_ran,primus=primus,sdss=sdss
     cylheight = param.cylheight
     threshold = param.thresh
     thrshld = float(param.thresh)/100.0
-    nz = 200
+    nz = 50 
     
     radius_string       = strtrim(string(cylrad),2)
     height_string       = strtrim(string(cylheight),2)

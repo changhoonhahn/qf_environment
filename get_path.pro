@@ -7,7 +7,7 @@ function get_path, chh327=chh327, primus=primus, envt=envt, envcount=envcount, $
     homedir = '/home/users/hahn/'
     chidir = '/mount/chichipio2/hahn/'
     smfdir = '/mount/moon1/ioannis/research/projects/primus/mf/2165/mfs_v20/'
-    repodir = '/home/users/hahn/primus/pro/spec0d/envcount/'
+    repodir = '/home/users/hahn/qf_environment/'
     mfdir = '/mount/moon1/ioannis/research/projects/primus/mf/2165/'
     mfarchive = '/mount/moon1/ioannis/archive/primus/mf/'
     if keyword_set(chh327) then return, chh327dir

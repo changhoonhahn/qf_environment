@@ -28,12 +28,14 @@ pro build_target_sample,run,Nransack,Nrandom,literature=literature, primus=primu
     if keyword_set(sdss) then area=get_poly_area(/sdss,/sr)
 
     if keyword_set(sdss) then sample = ['sdss']
-    if keyword_set(primus) then sample = ['es1','cosmos','cfhtls_xmm','cdfs','xmm_swire'] 
+    if keyword_set(sdss) then fields = ['sdss']
+    if keyword_set(primus) then sample = ['']
+    if keyword_set(primus) then fields = ['es1','cosmos','cfhtls_xmm','cdfs','xmm_swire'] 
     subsample   = ['all', 'active', 'quiescent']
 
     survey=''
-    for i=0L,n_elements(sample)-1L do begin
-        survey=survey+sample[i]+'_'
+    for i=0L,n_elements(fields)-1L do begin
+        survey=survey+fields[i]+'_'
     endfor
 
 ;Vmax,avail file generated from build_vmax_avail.pro
@@ -45,7 +47,7 @@ pro build_target_sample,run,Nransack,Nrandom,literature=literature, primus=primu
     for i=0L,n_elements(sample)-1L do begin
         for ii =0L, n_elements(subsample)-1L do begin 
             if keyword_set(literature) then ext = '_lit' else ext = '' 
-            mfdatafile = mfdatapath+'mfdata_'+subsample[ii]+'_supergrid01_'+sample[i]+ext+'.fits.gz'
+            mfdatafile = mfdatapath+'mfdata_'+subsample[ii]+'_supergrid01'+sample[i]+ext+'.fits.gz'
             mfdata = mrdfits(mfdatafile,1)
 
             zlim = mfdata.z GE zmin AND mfdata.z LT zmax
@@ -54,7 +56,7 @@ pro build_target_sample,run,Nransack,Nrandom,literature=literature, primus=primu
            
             target = replicate({class:' ',ra:0.D,dec:0.D,redshift:0.,mr_01:0.,mb_00:0.,mass:0.,masslimit:0.,age:0.,SFR:0.,$ 
                        field:' ',weight:0.,vmax:0.,vmaxavail:0.},ngal)
-            target.field    = sample[i]
+            target.field    = data.field ; sample[i]
             target.ra       = data.ra
             target.dec      = data.dec
             target.redshift = data.z
@@ -79,6 +81,11 @@ pro build_target_sample,run,Nransack,Nrandom,literature=literature, primus=primu
                 vmax_evol = data_zbin.vmax_evol
                 vmax_avail = (vmax_evol/(lf_comvol(zmax_evol)-lf_comvol(zmin_evol)))$
                 *(get_vmax_avail(zmax_evol<zup,vz)-get_vmax_avail(zmin_evol>zlo,vz))
+                if (min(vmax_avail) LT 0.0) then begin
+                    print, "ERROR Negative Vmax,avail"
+                    print, "Try using fewer points for Vmax,avail interpol"
+                    STOP
+                endif 
 
                 target[where(target.redshift GT zbins[j].zlo AND target.redshift LE zbins[j].zup,target_zbin_count)].vmaxavail = vmax_avail
             endfor 
