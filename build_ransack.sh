@@ -14,18 +14,27 @@ if [[ $1 == "primus" ]]; then
     for i in $(seq 0 $((${#fields[@]}-1))); do 
         ransack_fname=$ransack_fname${fields[$i]}"_"
         random_fname=$random_fname${fields[$i]}"_"
+#        polygon=$field_dir${fields[$i]}"_field_galex_window_2mask.ply"
         polygon=$field_dir"ransack_"${fields[$i]}".ply"
         ransack_command=$ransack_command$polygon" " 
         random_command=$random_command$polygon" " 
     done
     ransack_fname=$ransack_dir$ransack_fname$Nransack".dat"
     random_fname=$ransack_dir$random_fname$Nrandom".dat"
-    ransack_command=$ransack_command$ransack_name
+    ransack_command=$ransack_command$ransack_fname
     random_command=$random_command$random_fname
     echo $ransack_fname
     echo $ransack_command
     echo $random_fname
     echo $random_command
+    if [[ ! -a $ransack_fname ]]; then  
+        $ransack_command
+        idl -e "ransack_dat2fits,'"$ransack_fname"'"
+    fi
+    if [[ ! -a $random_fname ]]; then  
+        $random_command
+        idl -e "ransack_dat2fits,'"$random_fname"'"
+    fi 
 elif [[ $1 == "sdss" ]]; then 
     field_dir='/global/data/scr/chh327/primus/science/mf/2165/'
     polygon=$field_dir"dr72bsafe0_galex_final.ply"

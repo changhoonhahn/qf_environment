@@ -8,7 +8,7 @@ function get_path, chh327=chh327, primus=primus, envt=envt, envcount=envcount, $
     chidir = '/mount/chichipio2/hahn/'
     smfdir = '/mount/moon1/ioannis/research/projects/primus/mf/2165/mfs_v20/'
     repodir = '/home/users/hahn/qf_environment/'
-    mfdir = '/mount/moon1/ioannis/research/projects/primus/mf/2165/'
+    mfdir = '/global/data/scr/chh327/primus/science/mf/2165/'
     mfarchive = '/mount/moon1/ioannis/archive/primus/mf/'
     if keyword_set(chh327) then return, chh327dir
     if keyword_set(primus) then return, chh327dir+'primus/'
@@ -22,7 +22,7 @@ function get_path, chh327=chh327, primus=primus, envt=envt, envcount=envcount, $
     if keyword_set(nbar) then return, chidir+'nbar/'
     if keyword_set(power) then return, chidir+'power/'
     if keyword_set(repo) then return, repodir
-    if keyword_set(isedfit) then return, mfarchive+'isedfit/' 
+    if keyword_set(isedfit) then return, mfdir+'parent_v20/'  
     if keyword_set(parent) then return, mfdir+'parent_v20/'
     if keyword_set(mfdata) then return, chh327dir+'primus/mfdata/'
     if keyword_set(target) then return, chh327dir+'primus/data/target/'

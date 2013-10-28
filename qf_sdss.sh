@@ -20,10 +20,10 @@ Nrandom=$3
 ##########################################################################################
 # Build target and environment defining population:  
 ##########################################################################################
-#idl -e "build_target_sample,"$run","$Nransack","$Nrandom",/literature,/sdss"
-#
+idl -e "build_target_sample,"$run","$Nransack","$Nrandom",/literature,/sdss"
+
 #idl -e "build_env_sample"
-#
-idl -e "build_environment_cylinder,"$run","$Nransack",/sdss,/literature"
-#idl -e "build_smf,"$run",/sdss,/literature,/prank"
-#idl -e "build_smf,"$run",/sdss,/literature"
+
+#idl -e "build_environment_cylinder,"$run","$Nransack",/sdss,/literature"
+
+#idl -e "build_smf_im_mf_vmax,"$run",/sdss,/literature"

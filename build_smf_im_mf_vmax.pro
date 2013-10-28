@@ -2,7 +2,7 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
     if keyword_set(primus) then fields = ['es1','cosmos','cfhtls_xmm','cdfs','xmm_swire']
     if keyword_set(sdss) then fields = ['sdss']
     if keyword_set(primus) then samples = ['']
-    if keyword_set(sdss) then samples = ['sdss']
+    if keyword_set(sdss) then samples = ['_sdss']
     if keyword_set(literature) then litsuffix = '_lit_'$
         else litsuffix = ''
 
@@ -14,6 +14,7 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
     zmax        = param.zmax
     cylrad      = param.cylrad
     cylheight   = param.cylheight
+    highenvthresh= param.highenvthresh
     nbin        = param.nbin
     thresh      = param.thresh
 
@@ -31,32 +32,32 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
     endif 
     struct_print, zbins
 
-    fieldfactor = dblarr(n_elements(fields))
-    for k=0L,n_elements(fields)-1L do begin
-        if keyword_set(primus) then begin 
-            fieldfactor[k]= get_poly_area(/primus,/sr)/$
-                get_poly_area(/primus,/sr,field=fields[k])
-        endif 
-        if keyword_set(sdss) then fieldfactor[k]=1.0
-    endfor
-    
-    binsize = mf_binsize(bin=0.3,minmass=minmass,maxmass=maxmass)
+;    fieldfactor = dblarr(n_elements(fields))
+;    for k=0L,n_elements(fields)-1L do begin
+;        if keyword_set(primus) then begin 
+;            fieldfactor[k]= get_poly_area(/primus,/sr)/$
+;                get_poly_area(/primus,/sr,field=fields[k])
+;        endif 
+;        if keyword_set(sdss) then fieldfactor[k]=1.0
+;    endfor
+    binsize = mf_binsize(bin=0.1,minmass=minmass,maxmass=maxmass)
 
     sf_q = ['active','quiescent']
     if keyword_set(primus) then zbin = ['0204', '0406', '0608', '0810']
     if keyword_set(sdss) then zbin=['nobin']
     hilow = ['hienv','midenv','lowenv']
 
-    data_struct = {redshift:0.,mass:0.,masslimit:0.,envcount:0.,vmax:0.,vmaxavail:0.,weight:0.,edgecut:0L, prank:0.,sfq:'',field:''}
+    data_struct = {ra:0.,dec:0.,redshift:0.,mass:0.,masslimit:0.,envcount:0.,vmax:0.,vmaxavail:0.,weight:0.,edgecut:0L, prank:0.,sfq:'',field:''}
 
     for i=0L, n_elements(sf_q)-1L do begin
         for ii=0L, n_elements(samples)-1L do begin
             targetfile = get_path(/envcount)+'envcount_cylr'+radius_string+'h'+height_string+'_thresh'+threshold_string+'_nbin'$
-                +nbin_string+'_'+samples[ii]+'_'+sf_q[i]+litsuffix+'test_'+envfname
+                +nbin_string+samples[ii]+'_'+sf_q[i]+litsuffix+envfname
             print, targetfile
             target  = mrdfits(targetfile, 1)
             data    = replicate(data_struct,n_elements(target))
-
+            data.ra         = target.ra
+            data.dec        = target.dec
             data.redshift   = target.redshift
             data.mass       = target.mass
             data.masslimit  = target.masslimit
@@ -82,21 +83,21 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
         smcomp = allgal_combine.mass GT allgal_combine.masslimit
 
         zbin_data = allgal_combine[where(edgecut AND zindx AND smcomp,zbin_count)]
+        those = where(edgecut AND zindx AND smcomp)
         for kk=0L,n_elements(hilow)-1L do begin
             for k=0L,n_elements(sf_q)-1L do begin
                 sfqindx = zbin_data.sfq EQ sf_q[k]
-                highenvthresh = 1.5
                 if kk eq 0 then env_indx = zbin_data.envcount GT highenvthresh 
                 if kk eq 1 then env_indx = zbin_data.envcount GT 0.0 AND $ 
                     zbin_data.envcount LE highenvthresh 
                 if kk eq 2 then env_indx = zbin_data.envcount EQ 0.0
                 
                 finaldata = zbin_data[where(sfqindx AND env_indx,finaldata_count)]
-                print, zbin[iii], sf_q[k], hilow[kk],float(finaldata_count)/float(zbin_count),max(finaldata.envcount)
-                print, min(finaldata.mass), max(finaldata.mass), min(finaldata.vmaxavail), max(finaldata.vmaxavail), min(finaldata.weight), max(finaldata.weight)
+                these = those[where(sfqindx AND env_indx)]
 
                 hist = im_mf_vmax(finaldata.mass,finaldata.weight/finaldata.vmaxavail,binsize=binsize,minmass=minmass,maxmass=maxmass,masslimit=finaldata.masslimit,rev=rev)
                 hist = struct_addtags(hist,{nfield:intarr(hist.nbins),thesefields:strarr(5,hist.nbins)})
+                print, zbin[iii], sf_q[k], hilow[kk],float(finaldata_count)/float(zbin_count),max(finaldata.envcount),hist.ngal
 
                 ; Obtains the fields that contribute to the SMF at each mass bin: 
                 if keyword_set(sdss) then begin
@@ -116,16 +117,15 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
                 ; Since SDSS only has one field, it has to divide SDSS by RA and DEC: 
                 if keyword_set(sdss) then begin 
                     sdss_hist = hist_nd(transpose([[finaldata.ra],[finaldata.dec]]),$
-                        [30D,20D],rev=rev)
-                    nbins = n_elements(sdss_hist)
-                    notempty = where(hist gt 1000,nfield_jack)
+                        [30D,20D],rev=sdss_rev)
+                    notempty = where(sdss_hist gt 100,nfield_jack)
                 endif else nfield_jack = n_elements(fields)
 
                 for f=0L,nfield_jack-1L do begin 
                     if keyword_set(sdss) then begin 
-                        nn = notempty[ii] 
-                        ;toss = these[rev[rev[nn]:rev[nn+1]-1]]
-                        ;keep = cmset_op(these,'and',/not2,toss)
+                        nn = notempty[f] 
+                        toss = [sdss_rev[sdss_rev[nn]:sdss_rev[nn+1]-1]]
+                        keep = cmset_op(lindgen(n_elements(finaldata)),'and',/not2,toss)
                         reweight = 1D
                     endif else begin 
                         keep = where(strtrim(finaldata.field,2) ne fields[f]) 
@@ -142,7 +142,7 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
                         jack_mfdata = [jack_mfdata, jack_hist]
                     endelse 
                 endfor
-
+                
                 good = where(hist.nfield gt 0, ngood)
                 for gg=0L,ngood-1L do begin 
                     if keyword_set(sdss) then begin 
@@ -188,7 +188,6 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
             if (sf_hist.nbins ne q_hist.nbins) then STOP
             qf = {mass:fltarr(nbins),qf:fltarr(nbins),err:fltarr(nbins),err_cv:fltarr(nbins),nfield:intarr(nbins),thesefields:strarr(5,nbins)}
 
-
             for n=0L,nbins-1L do begin
                 qf.mass[n] = q_hist.mass[n]
                 qf.qf[n] = q_hist.phi[n]/(q_hist.phi[n]+sf_hist.phi[n])
@@ -210,12 +209,25 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
                 qf.nfield[n] = nfieldcount
             endfor 
                 
+            if keyword_set(sdss) then begin 
+                sf_sdss_hist = hist_nd(transpose([[sf_finaldata.ra],[sf_finaldata.dec]]),$
+                    [30D,20D],rev=sf_rev)
+                q_sdss_hist = hist_nd(transpose([[q_finaldata.ra],[q_finaldata.dec]]),$
+                    [30D,20D],rev=q_rev)
+                sf_nbins= n_elements(sf_sdss_hist)
+                q_nbins = n_elements(q_sdss_hist)
+                notempty = where(sf_sdss_hist gt 100 and q_sdss_hist gt 100,nfield_jack)
+            endif else nfield_jack = n_elements(fields)
+
             for f=0L,nfield_jack-1L do begin 
                 if keyword_set(sdss) then begin 
-                    nn = notempty[ii] 
-                    ;toss = these[rev[rev[nn]:rev[nn+1]-1]]
-                    ;keep = cmset_op(these,'and',/not2,toss)
-                    reweight = 1D
+                    nn = notempty[f] 
+                    sf_toss = [sf_rev[sf_rev[nn]:sf_rev[nn+1]-1]]
+                    q_toss = [q_rev[q_rev[nn]:q_rev[nn+1]-1]]
+                    sf_keep = cmset_op(lindgen(n_elements(sf_finaldata)),'and',/not2,sf_toss)
+                    q_keep = cmset_op(lindgen(n_elements(q_finaldata)),'and',/not2,q_toss)
+                    sf_reweight = 1D
+                    q_reweight = 1D
                 endif else begin 
                     sf_keep = where(strtrim(sf_finaldata.field,2) ne fields[f]) 
                     q_keep  = where(strtrim(q_finaldata.field,2) ne fields[f]) 
@@ -252,20 +264,19 @@ pro build_smf_im_mf_vmax, run, primus=primus, sdss=sdss, literature=literature, 
                     match, strtrim(qf.thesefields[*,good[gg]],2), fields, m1, m2
                     nbb = n_elements(m2)
                 endelse 
-;                if (nbb GE 3) then begin 
+                if (nbb GE 3) then begin 
                     qf.err_cv[good[gg]] = sqrt((nbb-1.0)/nbb*$
                         total((jack_qfdata[m2].qf[good[gg]]-$
                         djs_mean(jack_qfdata[m2].qf[good[gg]]))^2))
-;                endif 
+                endif 
             endfor 
-;            good = where(qf.nfield gt 0 and qf.err_cv gt 0.0) 
-;            fix = where(qf.nfield gt 0 and qf.err_cv le 0.0, nfix)
-;            print, nfix
-;            if (nfix ne 0) then begin 
-;                get_element, good, fix, nearest
-;                qf.err_cv[fix] = qf.err_cv[good[nearest]]
-;            endif 
-            
+            good = where(qf.nfield gt 0 and qf.err_cv gt 0.0) 
+            fix = where(qf.nfield gt 0 and qf.err_cv le 0.0, nfix)
+            if (nfix ne 0) then begin 
+                get_element, good, fix, nearest
+                qf.err_cv[fix] = qf.err_cv[good[nearest]]
+            endif 
+           
             if keyword_set(primus) then qf_fname='qf_primus_cylr'+radius_string+'h'+height_string+$
                 '_thresh'+threshold_string+'_nbin'+nbin_string+litsuffix+hilow[kk]+'_'+zbin[iii]+$
                 'z.fits'

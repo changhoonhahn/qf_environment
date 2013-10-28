@@ -1,7 +1,8 @@
 pro build_environment_cylinder,run,Nransack,primus=primus, sdss=sdss, literature=literature
     if keyword_set(primus) then sample = ['']
     if keyword_set(primus) then fields = ['es1','cosmos','cfhtls_xmm','cdfs','xmm_swire']
-    if keyword_set(sdss) then sample = ['sdss']
+    if keyword_set(sdss) then sample = ['_sdss']
+    if keyword_set(sdss) then fields = ['sdss']
     subsample = ['all', 'active', 'quiescent']
 
     t0 = systime(1)
@@ -43,7 +44,7 @@ pro build_environment_cylinder,run,Nransack,primus=primus, sdss=sdss, literature
         for ii = 0L,n_elements(subsample)-1L do begin
             if keyword_set(literature) then ext='_lit' else ext=''
             mffile = get_path(/target)+'target_cylr'+radius_string+'h'+height_string+'_thresh'+threshold_string+$
-                '_nbin'+nbin_string+'_'+subsample[ii]+'_'+sample[i]+ext+'_test.fits'
+                '_nbin'+nbin_string+'_'+subsample[ii]+sample[i]+ext+'.fits'
             print, mffile
             mfdata = mrdfits(mffile, 1)
             ngal = n_elements(mfdata)
@@ -65,7 +66,7 @@ pro build_environment_cylinder,run,Nransack,primus=primus, sdss=sdss, literature
        
             output  = struct_addtags(struct_addtags(mfdata, nmatch), edgecut)
             fname   = get_path(/envcount)+'envcount_cylr'+radius_string+'h'+height_string+'_thresh'+threshold_string+'_nbin'$
-                +nbin_string+'_'+sample[i]+'_'+subsample[ii]+ext+'_test_'+envfname
+                +nbin_string+sample[i]+'_'+subsample[ii]+ext+'_'+envfname
             print, fname
             mwrfits, output, fname, /create
         endfor

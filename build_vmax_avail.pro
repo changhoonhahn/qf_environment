@@ -69,6 +69,7 @@ pro build_vmax_avail,run,n_rsk,n_ran,primus=primus,sdss=sdss
         edgecut_pts     = ran_data[where(z_indx AND edgecut_indx, edgecut_count)] 
         unedgecut_pts   = ran_data[where(z_indx, unedgecut_count)]
         eff_vmax[i] = float(edgecut_count)/float(unedgecut_count)*lf_comvol(zbin[i])
+        print, zbin[i],eff_vmax[i]/lf_comvol(zbin[i]),float(edgecut_count)/float(unedgecut_count)
     endfor 
     out = replicate({z:0.,v_max_avail:0.},nz)
     out.z = zbin
