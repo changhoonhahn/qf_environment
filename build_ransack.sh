@@ -37,23 +37,21 @@ if [[ $1 == "primus" ]]; then
     fi 
 elif [[ $1 == "sdss" ]]; then 
     field_dir='/global/data/scr/chh327/primus/science/mf/2165/'
-    polygon=$field_dir"dr72bsafe0_galex_final.ply"
-    ransack_fname=$ransack_dir"ransack_sdss_"$Nransack".dat"
-    random_fname=$ransack_dir"random_sdss_"$Nrandom".dat"
-    ransack_command="ransack -r "$Nransack" "$polygon" "$ransack_fname
-    random_command="ransack -r "$Nrandom" "$polygon" "$random_fname
+    target_polygon=$field_dir"dr72bsafe0_galex_final.ply"
+    edp_polygon=$field_dir"dr72bsafe0.ply"
+
+    ransack_fname=$ransack_dir"ransack_sdss_edpfield_"$Nransack".dat"
+    random_fname=$ransack_dir"random_sdss_targetfield_"$Nrandom".dat"
+    ransack_command="ransack -r "$Nransack" "$edp_polygon" "$ransack_fname
+    random_command="ransack -r "$Nrandom" "$target_polygon" "$random_fname
     echo $ransack_fname
     echo $ransack_command
     echo $random_fname
     echo $random_command
-    if [[ ! -a $ransack_fname ]]; then  
-        $ransack_command
-        idl -e "ransack_dat2fits,'"$ransack_fname"'"
-    fi
-    if [[ ! -a $random_fname ]]; then  
-        $random_command
-        idl -e "ransack_dat2fits,'"$random_fname"'"
-    fi 
+    $ransack_command
+    idl -e "ransack_dat2fits,'"$ransack_fname"'"
+    $random_command
+    idl -e "ransack_dat2fits,'"$random_fname"'"
 else 
     echo "survey must either be primus or sdss"
 fi 

@@ -6,7 +6,8 @@ function get_mf_vagc_chh, sample=sample, letter=letter, $
 ; POSTSTR 0 -30.   -10. 1.e-3 0.5   0.1 0.3 0.7 0.0  0.1  0.00 -10.0  10.0
 ;    zminmax = [0.01,0.2]
 ;   zminmax = [0.01,0.25]
-    zminmax = [0.06,0.145]
+;    zminmax = [0.06,0.145]
+    zminmax = [0.0375,0.145]
     sample = 'dr72'
     letter = 'bsafe'
     poststr = '0'

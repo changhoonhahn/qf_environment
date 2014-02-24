@@ -29,11 +29,11 @@ function get_environment_cylinder, envfile=envfile, targ=targ, rad=rad, h=h
 ;read in the environment sample file 
 	envdata=mrdfits(envfile, 1) 
 	
-        r_targ = 3000.0*comdis(targ.zprimus, 0.3, 0.7)
+        r_targ = 3000.0*comdis(targ.redshift, 0.3, 0.7)
 	phi_targ = targ.ra
 	theta_targ = 90.0 - targ.dec
 	
-	r_env = 3000.0*comdis(envdata.zprimus, 0.3, 0.7)
+	r_env = 3000.0*comdis(envdata.redshift, 0.3, 0.7)
 	phi_env = envdata.ra 
 	theta_env = 90.0 - envdata.dec
 

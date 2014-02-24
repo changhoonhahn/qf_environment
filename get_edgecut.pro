@@ -1,119 +1,80 @@
-;+
-; NAME:
-;   get_edgecut
-;
-; PURPOSE:
-;   Determines whether or not the input points are on the edges of the polygons. First, ransack is used 
-;   to generate random points on the 2mask polygons. Then spherematch is used to determine how many of the 
-;   random points are within a specified distance (mlength(z), a function of redshift) of the input points. 
-;   The input objects are classified into bins according to redshift, with each bin having an average mlength(z).
-;
-; CALLING SEQUENCE:
-;   get_edgecount_bin_SMF(input=, zmin=, zmax=, nbin=, thresh=)
-;
-; INPUTS:
-;   input - data structure input
-;   zmin - Minimum redshift value of interest.
-;   zmax - Maximum redshift value of interest.
-;   nbin - Number of redshift bins we want to divide the data.
-;
-; OUTPUTS:
-;   nmatch - number of environment objects inside the cylinder centered around each of the target objects
-;
-; FUNCTIONS USED:
-;   rd_tfile('data.fits',3)  [Requires str2arr.pro and deriv_arr.pro]
-;   propmotdis(z, OmegaM, OmegaL, weq=weq)
-;   get_total_poly_area() 
-;
-; PROCEDURES USED:
-;   spherematch, ra1, dec1, ra2, dec2, matchlength, match1, match2, distance12, maxmatch=
-;
-;-------------------------------------------------------
-
-function get_edgecut,ran_ra,ran_dec, target,zmin=zmin,zmax=zmax,rad=rad,nbin=nbin,thresh=thresh,primus=primus,sdss=sdss
+function get_edgecut,ran_ra,ran_dec, target,zmin=zmin,zmax=zmax,rad=rad,thresh=thresh,$
+    primus=primus,sdss=sdss
     if (n_elements(ran_ra) eq 0 OR n_elements(ran_dec) EQ 0 OR n_elements(target) EQ 0) then print, 'INPUT ERROR'
 
-    ransack_num = n_elements(ran_ra)
-    print, 'Nransack=',ransack_num
-
-;Arranging the data into redshift bins:
-    zdiff=zmax-zmin
-    zstep=zdiff/nbin
-    b=dblarr(nbin+1)
-    b[nbin]=zmax
-    z0=zmin
-
-    for j=0L,nbin-1 do begin
-    b[j]=z0
-    z0=z0+zstep
-    endfor
+    n_ransack = n_elements(ran_ra)
+    print, 'Nransack=', n_ransack, ' R_aperture=',rad
 
     outputs=replicate({edgecut:0L}, n_elements(target))
-    binstart=0
-    bincount=0
 
-; Length at different redshift for each of the bins
-; Note, the average of the redshift bins are used as redshift: 
-    mlength=dblarr(nbin)
-    for k=0L, nbin-1 do begin
-        mlength[k]=(float(rad)/(3000.0*propmotdis(0.5*(b[k]+b[k+1]), 0.3, 0.7)))*(180.0/!PI)
-    endfor
+; Angular separation of the matching radius defined at z_min in degrees
+    r_angsep_max = (float(rad)/(3000.0*angdidis(zmin,0.3,0.7)))*(180.0/!PI)
 
-;Total area of all the polygons:
-    if keyword_set(primus) then totalarea=get_poly_area(/primus)
-    if keyword_set(sdss) then totalarea=get_poly_area(/sdss)
+;Total area of all the polygons for the survey
+    if keyword_set(primus) then totalarea = get_poly_area(/primus)
+    if keyword_set(sdss) then totalarea = get_poly_area(/sdss,/edp)
 
-    for i=0L,nbin-1 do begin
-;        help, /mem
-    	zbin = where(target.zprimus ge b[i] and target.zprimus lt b[i+1], zbincount)
-     	bin = target[zbin]
-        print, 'bin dimensions=',zbincount 
+; Spherematch cannot handle running on the entire PRIMUS sample so it is divded into bins 
+    if keyword_set(primus) then nbin = ceil(float(n_elements(target))/25000.0)
+    if keyword_set(sdss) then nbin = 1L 
+    print, 'Number of bins in edgecut', nbin
+    bin_z = fltarr(nbin+1L) 
+    bin_z[0] = zmin
+    for j=1L,nbin do begin 
+        bin_z[j]=bin_z[j-1]+float(zmax-zmin)/float(nbin)
+    endfor 
 
-        binra   = bin.ra
-        bindec  = bin.dec
-        binz    = bin.zprimus
-     	spherematch, ran_ra, ran_dec, binra, bindec, mlength[i], m_ran, m_targ,$
+    for i=0L, nbin-1L do begin
+        bin_index = where(target.redshift GE bin_z[i] AND target.redshift LT bin_z[i+1], bin_count)
+        print, 'Number of galaxies in bin #'+strtrim(string(i+1L),2)+' = ', bin_count
+        bin = target[bin_index]
+
+        r_angsep = (float(rad)/(3000.0*angdidis(bin.redshift, 0.3, 0.7)))*(180.0/!PI)
+     	
+        spherematch, ran_ra, ran_dec, bin.ra, bin.dec, r_angsep_max, m_ran, m_targ,$
             bindist12, maxmatch=0
-     
-;     	ml      = (float(rad)/(3000.0*propmotdis(binz[m_targ], 0.3, 0.7)))*(180.0/!PI)
-;     	ikeep   = where(bindist12 lt ml, nkeep)
-        print, 'bindist=', size(bindist12, /dimensions);, 'nkeep=', nkeep
+    
+        r_angsep_m_targ = r_angsep[m_targ]
+        print, 'n[r_angsepz] = ', n_elements(r_angsep_m_targ), '  n[m_targ] = ', n_elements(m_targ), n_elements(bindist12)
+        print, 'min[r_angsep_m_targ] = ', min(r_angsep_m_targ), '   max[r_angsep_m_targ] = ', max(r_angsep_m_targ)
+        ikeep = where(bindist12 lt r_angsep_m_targ, nkeep)
+        print, 'number of matches to keep=', nkeep
+    
+        mkeep = m_targ[ikeep]
+        isort   = sort(mkeep)
+        sorted  = mkeep[sort(mkeep)]
+        iuniq   = uniq(mkeep[isort])
 
-;        mt      = m_targ[ikeep]
-        mt      = m_targ
-        isort   = sort(mt)
-        sorted  = mt[sort(mt)]
-        iuniq   = uniq(mt[isort])
+        nmatch  = lonarr(n_elements(bin))
+        threshold = fltarr(n_elements(bin))
+
         istart  = 0L
-        nmatch  = lonarr(zbincount)
- 
         for m=0L, n_elements(iuniq)-1L do begin
             iend    = iuniq[m]
             icurr   = isort[istart:iend]
-            nmatch[mt[icurr[0]]] = n_elements(icurr)
+            nmatch[mkeep[icurr[0]]] = n_elements(icurr)
+            if (m EQ 0L) then begin
+                mwrfits, bin[mkeep[icurr[0]]], 'sdss_bin_singlegalaxy.fits', /create
+                around_gal = replicate({ra:0.,dec:0.},n_elements(icurr)) 
+                around_gal.ra = ran_ra[m_ran[ikeep[icurr]]]
+                around_gal.dec = ran_dec[m_ran[ikeep[icurr]]]
+                mwrfits, around_gal, 'sdss_ransack_aroundgalaxy.fits', /create
+            endif
             istart  = iend+1L
         endfor 
+        
+        threshold = (float(n_ransack)/totalarea)*(r_angsep^2*!PI)*thresh
+        print, 'n_threshold=',n_elements(threshold),'   mean threshold=', mean(threshold)
 
-        threshold = (float(ransack_num)/totalarea)*(mlength[i]^2*!PI)*thresh
-; We determine the (number of random points within mlength)/(expected number of random points): 
-;        randense = (float(nmatch)/(mlength[i]^2*!PI))/(float(ransack_num)/totalarea)
-; We determine a cut for whether the point is on the edge or not on the edge: 
-        edgecut=lonarr(zbincount)
-        edgecut[where(nmatch lt threshold)] = 1
-;        for n=0L, zbincount-1L do begin
-;            if nmatch[n] lt threshold[i] then begin
-;                    edgecut[n]=0
-;            endif else begin
-;                    edgecut[n]=1
-;            endelse
-;        endfor
+; If nmatch < threshold then point is on the edge: edgecut = 0 
+; If nmatch > threshold then point is NOT on the edge: edgecut = 1 
+        bin_output = lonarr(n_elements(bin))
+        bin_output[where(nmatch GE threshold)] = 1L
+        outputs[bin_index].edgecut = bin_output 
 
-        print, 'average nmatch=', mean(nmatch),' threshold=',threshold,' mean edgecut=',mean(edgecut)
-
-        binend      = binstart+zbincount-1
-        outputs[binstart:binend].edgecut = edgecut
-        binstart    = binstart+zbincount
-        bincount    = bincount+zbincount
     endfor
+    print, 'mean edgecut=',mean(outputs.edgecut)
     return, outputs
 end 
+; We determine the (number of random points within r_angsep)/(expected number of random points): 
+;        randense = (float(nmatch)/(r_angsep[i]^2*!PI))/(float(ransack_num)/totalarea)

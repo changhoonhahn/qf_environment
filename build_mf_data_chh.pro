@@ -18,7 +18,8 @@ end
 
 pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
 ; jm11aug12ucsd - build all the data structures we are going to need
-    mfpath = mf_path(/mfs)
+;    mfpath = '/global/data/scr/chh327/primus/mfdata/mfdata_chh/new/env_zrange/' ; z range of EDP
+    mfpath = '/global/data/scr/chh327/primus/mfdata/mfdata_chh/new/'    ; z range of John's data 
     h100 = mf_h100()
     q0 = mf_q0(qz0=qz0)
     
@@ -27,20 +28,21 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
 
 ; read the VAGC window function area to speed up the computations below
     if keyword_set(sdss) and (n_elements(vagc_area) eq 0) then $
-      windowfile = get_mf_window('sdss',area=vagc_area,/sr)
+      windowfile = get_mf_window_chh('sdss',area=vagc_area,/sr)
 
 ; specify the fields and redshift bins
     field = get_mf_fields(sdss=sdss)
 ;   field = field[where(strtrim(field,2) ne 'cosmos')]
     nfield = n_elements(field)
-    zbins = mf_zbins(sdss=sdss,nzbins,literature=literature)
+;    zbins = mf_zbins_chh(sdss=sdss,nzbins,literature=literature)
+    zbins = mf_zbins(sdss=sdss, nzbins, literature=literature)
     struct_print, zbins
 
 ; select quiescent and star-forming galaxies using various criteria
-;   subsample = ['all','quiescent','active']
+   subsample = ['all','quiescent','active']
 ;   subsample = ['all','quiescent','active','red','blue']
 ;   subsample = ['all','quiescent','active','quiescent_nuvmr','active_nuvmr','red','blue']
-    subsample = ['all','quiescent','active'] ;,'red','blue']
+;    subsample = ['all','quiescent','active','red','blue']
 ;    if keyword_set(sdss) then subsample = [subsample,'red_gmr','blue_gmr']
 ;   subsample = ['blue_gmr']
 ;   subsample = ['all','quiescent','active','red','blue','red_gmr',$
@@ -77,11 +79,10 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
        nfilt = n_elements(filters)
        for jj = 0, nsuper-1 do begin
           allisedparent = read_mf_isedfit_chh(field[ii],supergrid=super[jj].supergrid,/parent)
-          mass = allisedparent.mass_50
-
 ; three selections: (1) ^{0.1}(NUV-r) vs mass; (2) ^{0.1}(u-r) vs
 ; Mr; and (3) U-V vs V-J
-          sfr = allisedparent.sfr100_50
+          sfr = allisedparent.sfr100_50+0.30
+;          sfr = allisedparent.sfr100_50
           mass = allisedparent.mass_50
           sfrm = sfr-mass+9.0 ; [Gyr^-1]
           nuv = allparent.k_fnuvugrizjhk_absmag_01[1]
@@ -101,24 +102,16 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
 ;         for ss = 6, 6 do begin
           delvarx, indx
           for ss = 0, n_elements(subsample)-1 do begin
-
 ; pick the right sample
              if subsample[ss] eq 'all' then indx = lindgen(n_elements(allparent))
-             if subsample[ss] eq 'quiescent' then indx = mf_select_sfr_quiescent(sfr,mass,z=allparent.zprimus)                   ; quiescent
-             if subsample[ss] eq 'active' then indx = mf_select_sfr_quiescent(sfr,mass,z=allparent.zprimus,/active)              ; star-forming
-             if subsample[ss] eq 'quiescent_nuvmr' then indx = mf_select_nuvmr_quiescent(nuvmr,mass,z=allparent.zprimus)      ; quiescent
-             if subsample[ss] eq 'active_nuvmr' then indx = mf_select_nuvmr_quiescent(nuvmr,mass,z=allparent.zprimus,/active) ; star-forming
-             if subsample[ss] eq 'red' then indx = mf_select_umr_red(umr,mr,z=allparent.zprimus)                              ; red u-r
-             if subsample[ss] eq 'blue' then indx = mf_select_umr_red(umr,mr,z=allparent.zprimus,/blue)                       ; blue u-r
-             if subsample[ss] eq 'red_gmr' then indx = mf_select_gmr_red(gmr,mr,z=allparent.zprimus)                          ; red g-r
-             if subsample[ss] eq 'blue_gmr' then indx = mf_select_gmr_red(gmr,mr,z=allparent.zprimus,/blue)                   ; blue g-r
-             if subsample[ss] eq 'uvj_quiescent' then indx = mf_select_uvj_quiescent(bigumv,bigvmj,z=allparent.zprimus)       ; UVJ quiescent
-             if subsample[ss] eq 'uvj_active' then indx = mf_select_uvj_quiescent(bigumv,bigvmj,z=allparent.zprimus,/active)  ; UVJ star-forming
+             if subsample[ss] eq 'quiescent' then indx = mf_select_sfr_quiescent_chh(sfr,mass,z=allparent.zprimus)                   ; quiescent
+             if subsample[ss] eq 'active' then indx = mf_select_sfr_quiescent_chh(sfr,mass,z=allparent.zprimus,/active)              ; star-forming
 
              parent = allparent[indx]
              isedparent = allisedparent[indx]
              ngal = n_elements(parent)
 
+             print, subsample[ss], 'N_GAL = ',ngal 
 ; read the limits file
              if keyword_set(sdss) then begin
                 masslim = 8.95
@@ -126,8 +119,10 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
 ;               masslim = 8.975 ; 9.0
                 masslim_50 = masslim
              endif else begin
-                limitsfile = mfpath+'limits'+prefix+'_'+subsample[ss]+$
+                limitsfile = '/global/data/scr/chh327/primus/mfdata/'+$
+                    'limits'+prefix+'_'+subsample[ss]+$
                   '_supergrid'+superstring[jj]+litsuffix+'.fits.gz'
+                print, limitsfile 
                 limits = mrdfits(limitsfile,1)
                 limits1 = limits[where(strtrim(limits.field,2) eq field[ii])]
                 masslim = limits1.masslim_95
@@ -142,7 +137,8 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
                targ_mag: 0.0, r50: -999.0, sb50: -999.0, mb_00: 0.0, mr_01: 0.0, mg_01:0.0, $
                umb_00: 0.0, nuvmr_01: 0.0, nuvmr_00: 0.0, umr_01: 0.0, gmr_01: 0.0, rmj_01: 0.0, rmj_00: 0.0, $
                bigumv: 0.0, bigvmj: 0.0, mb_00_evol: 0.0, mr_01_evol: 0.0, $
-               weight: 0.0, vmax_evol: 0D, vmax_noevol: 0D, vovervmax_evol: 0D, vovervmax_noevol: 0D, $
+               weight: 0.0, zmin_evol:0.0, zmin_noevol:0.0, zmax_evol:0.0, zmax_noevol:0.0,$
+               vmax_evol: 0D, vmax_noevol: 0D, vovervmax_evol: 0D, vovervmax_noevol: 0D, $
                age: 0.0, tau: 0.0, av: 0.0, metallicity: 0.0, sfr: 0.0, sfr100: 0.0, sfrm100: 0.0},ngal)
              mfdata.parent_id = indx
              mfdata.ra = parent.ra
@@ -192,6 +188,7 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
              mfdata.mr_01_evol = k_evolve(mfdata.mr_01,mfdata.z,q0,0.0,qz0)
 ;            mfdata.mz_06_evol = k_evolve(mfdata.mz_06,mfdata.z,q0,0.0,qz0)
 
+
              mfdata.isedfit_id = isedparent.isedfit_id
              mfdata.ised_chi2 = isedparent.chi2
              mfdata.mass = isedparent.mass_50
@@ -199,9 +196,12 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
              mfdata.tau = isedparent.tau_50
              mfdata.av = isedparent.av_50
              mfdata.sfr = isedparent.sfr_50
-             mfdata.sfr100 = isedparent.sfr100_50
+             mfdata.sfr100 = isedparent.sfr100_50+0.30  ;Adjustment made to compensate for SFR discrepancies in mfdata
+;             mfdata.sfr100 = isedparent.sfr100_50
              mfdata.sfrm100 = isedparent.sfr100_50-isedparent.mass_50+9.0 ; [Gyr^-1]
              mfdata.metallicity = isedparent.Z_50
+            
+;             if keyword_set(sdss) then mfdata = mfdata[where(mfdata.z GE zbins.zlo AND mfdata.z LT zbins.zup)]
 
              mfdatafile = mfpath+'mfdata_'+subsample[ss]+'_supergrid'+$
                superstring[jj]+'_'+field[ii]+litsuffix+'.fits'
@@ -209,6 +209,7 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
 
 ; loop on redshift to derive Vmax for each object
              for iz = 0, nzbins-1 do begin
+                print, zbins[iz].zlo, zbins[iz].zup
                 these = where((parent.zprimus ge zbins[iz].zlo) and $
                   (parent.zprimus lt zbins[iz].zup))
                 sample = parent[these]
@@ -222,6 +223,10 @@ pro build_mf_data_chh, sdss=sdss, clobber=clobber, literature=literature
                 zmin_noevol = sample.zmin_noevol>zbins[iz].zlo
                 zmax_noevol = sample.zmax_noevol<zbins[iz].zup
 
+                mfdata[these].zmin_evol = sample.zmin_evol
+                mfdata[these].zmax_evol = sample.zmax_evol 
+                mfdata[these].zmin_noevol = sample.zmin_noevol
+                mfdata[these].zmax_noevol = sample.zmax_noevol 
                 mfdata[these].vmax_evol = (area/3.0)*(lf_comvol(zmax_evol)-$
                   lf_comvol(zmin_evol))*(1.0/h100)^3.0 ; h=1-->h=0.7
                 mfdata[these].vmax_noevol = (area/3.0)*(lf_comvol(zmax_noevol)-$

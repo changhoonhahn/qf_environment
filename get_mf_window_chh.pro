@@ -28,7 +28,7 @@ function get_mf_window_chh, field, area=area, poly=poly, sr=sr, $
           suffix = '_galex'
           if keyword_set(irac) or field eq 'test_cfhtls_xmm' then suffix = suffix+'_irac'
        endelse
-       windowfile = getenv('PRIMUS_DATA')+'/survey_regions/fields/'+$
+       windowfile = '/global/data/scr/chh327/primus/survey_regions/fields/'+$
          strtrim(field,2)+'_field'+suffix+'_window_2mask.ply'
     endelse
     if (file_test(windowfile) eq 0) then $
